@@ -19,7 +19,7 @@ This MCP server is built using:
 - **MCP Protocol**: For frontend-agnostic communication
 - **Python 3.12+**: Core implementation language
 - **LangChain**: For document processing and RAG
-- **Vector Database**: ChromaDB for semantic search of legal cases
+- **Vector Database**: ChromaDB for semantic search of legal cases ✅ **IMPLEMENTED**
 - **LLM Integration**: OpenAI/Anthropic for intelligent analysis
 
 ## 📁 Project Structure
@@ -38,12 +38,17 @@ Wakalat-AI-Backend/
 │   │   ├── legal_research.py
 │   │   ├── document_drafter.py
 │   │   └── limitation_checker.py
+│   ├── services/              # Service layer
+│   │   ├── __init__.py
+│   │   └── vector_db.py       # Vector database service
 │   ├── utils/                 # Utility modules
 │   │   ├── __init__.py
 │   │   └── logger.py
 │   └── models/                # Data models
 │       ├── __init__.py
 │       └── case.py
+├── scripts/                    # Utility scripts
+│   └── load_sample_data.py    # Load sample cases into vector DB
 ├── data/                      # Data storage directory
 │   ├── chroma/               # Vector database
 │   └── documents/            # Document storage
@@ -87,7 +92,12 @@ Wakalat-AI-Backend/
    # Edit .env and add your API keys and configuration
    ```
 
-5. **Run the MCP server**
+5. **Load sample data into vector database** (optional but recommended)
+   ```bash
+   python scripts/load_sample_data.py
+   ```
+
+6. **Run the MCP server**
    ```bash
    python -m src.server
    ```
@@ -104,6 +114,9 @@ OPENAI_MODEL=gpt-4-turbo-preview
 # Database Configuration
 DATABASE_URL=sqlite:///./data/wakalat.db
 CHROMA_PERSIST_DIRECTORY=./data/chroma
+
+# Vector Database (optional)
+USE_TRANSFORMERS=false  # Set to true to use sentence-transformers for embeddings
 
 # Indian Legal Resources
 INDIANKANOON_BASE_URL=https://indiankanoon.org
@@ -184,6 +197,35 @@ Check limitation periods under Indian law.
 }
 ```
 
+## 🗄️ Vector Database
+
+The server includes a **vector database integration** for efficient semantic search of case laws and precedents:
+
+### Features
+- ✅ **ChromaDB Integration**: Persistent storage of case embeddings
+- ✅ **Semantic Search**: Find similar cases based on meaning, not just keywords
+- ✅ **Metadata Filtering**: Filter by court, year, jurisdiction
+- ✅ **Fallback Mode**: Works offline with basic embeddings
+- ✅ **Sample Data**: Includes 5 sample Indian Supreme Court cases
+
+### Quick Start
+
+```bash
+# Load sample data
+python scripts/load_sample_data.py
+
+# Test vector search
+python -c "
+from src.services.vector_db import get_vector_db
+vdb = get_vector_db()
+results = vdb.search_cases('breach of contract', n_results=3)
+for r in results:
+    print(f'{r[\"case_name\"]}: {r[\"relevance_score\"]}')
+"
+```
+
+For detailed documentation, see [docs/VECTOR_DATABASE.md](docs/VECTOR_DATABASE.md)
+
 ## 🔌 Integration with MCP Clients
 
 This server follows the Model Context Protocol specification and can be integrated with any MCP-compatible client:
@@ -247,14 +289,14 @@ This is a **template implementation**. To make it fully functional:
 ### Phase 1: Data Integration
 - [ ] Integrate with Indian Kanoon API for case law retrieval
 - [ ] Set up web scraping for Supreme Court/High Court websites
-- [ ] Create embeddings for legal documents using sentence-transformers
-- [ ] Build vector database with ChromaDB/Pinecone
+- [x] Create embeddings for legal documents using sentence-transformers
+- [x] Build vector database with ChromaDB/Pinecone
 
 ### Phase 2: AI Enhancement
 - [ ] Implement RAG pipeline with LangChain
 - [ ] Fine-tune prompts for Indian legal context
 - [ ] Add entity extraction (NER) for legal documents
-- [ ] Implement semantic search for precedents
+- [x] Implement semantic search for precedents
 
 ### Phase 3: Document Processing
 - [ ] Complete PDF parsing with pdfplumber
