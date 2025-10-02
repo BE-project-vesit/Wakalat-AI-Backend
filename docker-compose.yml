@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  wakalat-ai:
+    build: .
+    container_name: wakalat-ai-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    restart: unless-stopped
+    
+  # Optional: PostgreSQL database
+  # postgres:
+  #   image: postgres:15
+  #   container_name: wakalat-db
+  #   environment:
+  #     POSTGRES_DB: wakalat_db
+  #     POSTGRES_USER: wakalat_user
+  #     POSTGRES_PASSWORD: change_this_password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   postgres_data:
