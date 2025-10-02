@@ -5,6 +5,7 @@ Finds specific case laws by citation, party names, or legal provisions
 import json
 from typing import Optional
 from src.utils.logger import setup_logger
+from src.services.vector_db import get_vector_db
 
 logger = setup_logger(__name__)
 
@@ -30,42 +31,69 @@ async def find_case_laws(
     logger.info(f"Finding case laws - citation: {citation}, party: {party_name}, provision: {legal_provision}")
     
     try:
-        # TODO: Implement actual case law retrieval using:
-        # 1. Indian Kanoon API
-        # 2. Supreme Court website
-        # 3. High Court databases
-        # 4. Use LLM for summary generation if include_summary is True
+        # Get vector database instance
+        vector_db = get_vector_db()
         
-        # Placeholder implementation
+        cases_found = []
+        
+        # If citation is provided, try exact match first
+        if citation:
+            # Search by citation in metadata
+            search_results = vector_db.search_cases(
+                query=citation,
+                n_results=5
+            )
+            # Filter to those with matching citation
+            for case in search_results:
+                if case.get('citation', '').lower() == citation.lower():
+                    cases_found.append(case)
+        
+        # If party name is provided, search semantically
+        if party_name and not cases_found:
+            search_results = vector_db.search_cases(
+                query=f"case involving party {party_name}",
+                n_results=10
+            )
+            cases_found = search_results
+        
+        # If legal provision is provided, search semantically
+        if legal_provision and not cases_found:
+            search_results = vector_db.search_cases(
+                query=f"legal provision {legal_provision}",
+                n_results=10
+            )
+            cases_found = search_results
+        
+        # Format results
+        formatted_cases = []
+        for case in cases_found:
+            formatted_case = {
+                "case_name": case.get('case_name', 'N/A'),
+                "citation": case.get('citation', 'N/A'),
+                "court": case.get('court', 'N/A'),
+                "bench": case.get('bench', 'N/A'),
+                "date": case.get('date', 'N/A'),
+                "judges": case.get('judges', []),
+                "summary": case.get('summary', 'N/A') if include_summary else None,
+                "headnotes": case.get('headnotes', []),
+                "sections_involved": case.get('sections_involved', []),
+                "precedents_cited": case.get('precedents_cited', []),
+                "full_text_url": case.get('full_text_url', ''),
+                "pdf_url": case.get('pdf_url', ''),
+                "relevance_score": case.get('relevance_score', 0.0)
+            }
+            formatted_cases.append(formatted_case)
+        
         result = {
             "search_parameters": {
                 "citation": citation,
                 "party_name": party_name,
                 "legal_provision": legal_provision
             },
-            "cases_found": [],
-            # Example structure:
-            # {
-            #     "case_name": "State of Maharashtra v. ...",
-            #     "citation": "AIR 2020 SC 1234",
-            #     "court": "Supreme Court of India",
-            #     "bench": "3-judge bench",
-            #     "date": "2020-03-15",
-            #     "judges": ["Justice A", "Justice B"],
-            #     "summary": "AI-generated summary..." if include_summary else None,
-            #     "headnotes": ["Point 1", "Point 2"],
-            #     "sections_involved": ["Section 302 IPC", "Section 34 IPC"],
-            #     "precedents_cited": ["Previous case 1", "Previous case 2"],
-            #     "full_text_url": "https://...",
-            #     "pdf_url": "https://..."
-            # }
+            "cases_found": formatted_cases,
+            "total_found": len(formatted_cases),
+            "vector_db_enabled": True
         }
-        
-        result["note"] = (
-            "This is a template implementation. "
-            "Integrate with Indian Kanoon, Supreme Court APIs, or implement web scraping. "
-            "Use OpenAI/Anthropic for generating case summaries."
-        )
         
         return json.dumps(result, indent=2)
     

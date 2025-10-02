@@ -3,8 +3,10 @@ Precedent Search Tool
 Searches for legal precedents from Indian courts
 """
 import json
+import time
 from typing import Optional
 from src.utils.logger import setup_logger
+from src.services.vector_db import get_vector_db
 
 logger = setup_logger(__name__)
 
@@ -32,12 +34,58 @@ async def search_precedents(
     logger.info(f"Searching precedents for query: {query}")
     
     try:
-        # TODO: Implement actual precedent search using:
-        # 1. Vector database (ChromaDB) for semantic search
-        # 2. Indian Kanoon API or web scraping
-        # 3. Supreme Court/High Court databases
+        start_time = time.time()
         
-        # Placeholder implementation
+        # Get vector database instance
+        vector_db = get_vector_db()
+        
+        # Build filters for metadata search
+        filters = {}
+        if jurisdiction != "all":
+            # Map jurisdiction to court names
+            jurisdiction_map = {
+                "supreme_court": "Supreme Court of India",
+                "high_court": "High Court"
+            }
+            if jurisdiction in jurisdiction_map:
+                filters["court"] = jurisdiction_map[jurisdiction]
+        
+        # Search using vector database for semantic similarity
+        search_results = vector_db.search_cases(
+            query=query,
+            n_results=max_results,
+            filters=filters if filters else None
+        )
+        
+        # Filter by year if specified
+        if year_from or year_to:
+            filtered_results = []
+            for result in search_results:
+                case_year = result.get('year', 0)
+                if year_from and case_year < year_from:
+                    continue
+                if year_to and case_year > year_to:
+                    continue
+                filtered_results.append(result)
+            search_results = filtered_results
+        
+        # Format results for response
+        formatted_results = []
+        for result in search_results:
+            formatted_case = {
+                "case_name": result.get('case_name', 'N/A'),
+                "citation": result.get('citation', 'N/A'),
+                "court": result.get('court', 'N/A'),
+                "year": result.get('year', 0),
+                "summary": result.get('summary', 'N/A'),
+                "relevance_score": result.get('relevance_score', 0.0),
+                "key_points": result.get('headnotes', []),
+                "url": result.get('full_text_url', '')
+            }
+            formatted_results.append(formatted_case)
+        
+        search_time_ms = (time.time() - start_time) * 1000
+        
         results = {
             "query": query,
             "jurisdiction": jurisdiction,
@@ -45,32 +93,14 @@ async def search_precedents(
                 "year_from": year_from,
                 "year_to": year_to
             },
-            "total_found": 0,
-            "results": [
-                # Example structure for results
-                # {
-                #     "case_name": "State of Maharashtra v. ...",
-                #     "citation": "AIR 2020 SC 1234",
-                #     "court": "Supreme Court of India",
-                #     "year": 2020,
-                #     "summary": "Brief summary of the case...",
-                #     "relevance_score": 0.95,
-                #     "key_points": ["Point 1", "Point 2"],
-                #     "url": "https://indiankanoon.org/..."
-                # }
-            ],
+            "total_found": len(formatted_results),
+            "results": formatted_results,
             "search_metadata": {
-                "search_time_ms": 0,
-                "semantic_search_used": True
+                "search_time_ms": round(search_time_ms, 2),
+                "semantic_search_used": True,
+                "vector_db_enabled": True
             }
         }
-        
-        # For template purposes, add a note
-        results["note"] = (
-            "This is a template implementation. "
-            "Integrate with actual case law databases like Indian Kanoon, "
-            "Supreme Court API, or use web scraping with BeautifulSoup."
-        )
         
         return json.dumps(results, indent=2)
     
