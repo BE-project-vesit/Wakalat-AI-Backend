@@ -398,14 +398,27 @@ async def main():
     """
     logger.info(f"Starting {settings.mcp_server_name} v{settings.mcp_server_version}")
     
-    # Run the server using stdio transport
-    async with stdio_server() as (read_stream, write_stream):
-        await app.run(
-            read_stream,
-            write_stream,
-            app.create_initialization_options()
-        )
+    try:
+        # Run the server using stdio transport
+        async with stdio_server() as (read_stream, write_stream):
+            await app.run(
+                read_stream,
+                write_stream,
+                app.create_initialization_options()
+            )
+    except KeyboardInterrupt:
+        logger.info("Server shutdown requested")
+    except Exception as e:
+        logger.error(f"Server error: {e}", exc_info=True)
+        raise
+
+
+def cli_main():
+    """
+    CLI entry point for uv/pip installations
+    """
+    asyncio.run(main())
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    cli_main()
