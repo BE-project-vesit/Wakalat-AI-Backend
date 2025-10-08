@@ -16,6 +16,7 @@ Wakalat-AI is a specialized MCP server that provides AI-powered tools for legal 
 ## 🏗️ Architecture
 
 This MCP server is built using:
+
 - **MCP Protocol**: For frontend-agnostic communication
 - **Python 3.12+**: Core implementation language
 - **LangChain**: For document processing and RAG
@@ -72,28 +73,33 @@ Wakalat-AI-Backend/
 #### Option 1: Using uv (Recommended - Fast & Modern)
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/BE-project-vesit/Wakalat-AI-Backend.git
    cd Wakalat-AI-Backend
    ```
 
 2. **Install dependencies with uv**
+
    ```bash
    uv sync
    ```
 
 3. **Configure environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env and add your API keys and configuration
    ```
 
 4. **Load sample data** (optional but recommended)
+
    ```bash
    uv run python scripts/load_sample_data.py
    ```
 
 5. **Run the MCP server**
+
    ```bash
    uv run main.py
    ```
@@ -106,29 +112,34 @@ Wakalat-AI-Backend/
 #### Option 2: Traditional pip/venv
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/BE-project-vesit/Wakalat-AI-Backend.git
    cd Wakalat-AI-Backend
    ```
 
 2. **Create a virtual environment**
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **Configure environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env and add your API keys and configuration
    ```
 
 5. **Load sample data into vector database** (optional but recommended)
+
    ```bash
    python scripts/load_sample_data.py
    ```
@@ -168,6 +179,7 @@ ENABLE_LEGAL_RESEARCH=true
 ## 🔧 Available MCP Tools
 
 ### 1. search_precedents
+
 Search for legal precedents from Indian courts.
 
 ```json
@@ -180,6 +192,7 @@ Search for legal precedents from Indian courts.
 ```
 
 ### 2. find_case_laws
+
 Find specific case laws by citation or party name.
 
 ```json
@@ -190,6 +203,7 @@ Find specific case laws by citation or party name.
 ```
 
 ### 3. analyze_document
+
 Analyze legal documents for issues and compliance.
 
 ```json
@@ -201,6 +215,7 @@ Analyze legal documents for issues and compliance.
 ```
 
 ### 4. legal_research
+
 Conduct comprehensive legal research.
 
 ```json
@@ -213,6 +228,7 @@ Conduct comprehensive legal research.
 ```
 
 ### 5. draft_legal_notice
+
 Draft legal notices.
 
 ```json
@@ -224,6 +240,7 @@ Draft legal notices.
 ```
 
 ### 6. check_limitation
+
 Check limitation periods under Indian law.
 
 ```json
@@ -238,6 +255,7 @@ Check limitation periods under Indian law.
 The server includes a **vector database integration** for efficient semantic search of case laws and precedents:
 
 ### Features
+
 - ✅ **ChromaDB Integration**: Persistent storage of case embeddings
 - ✅ **Semantic Search**: Find similar cases based on meaning, not just keywords
 - ✅ **Metadata Filtering**: Filter by court, year, jurisdiction
@@ -306,6 +324,7 @@ The **MCP Inspector** is a web-based testing tool that provides an interactive i
 #### Quick Start with Inspector
 
 1. **Install and run the inspector** (one command does everything):
+
    ```bash
    npx @modelcontextprotocol/inspector uv run main.py
    ```
@@ -372,16 +391,19 @@ echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | uv run main.py
 If the inspector fails to connect:
 
 1. **Check server imports**:
+
    ```bash
    uv run python -c "from src.server import main; print('✓ Server imports OK')"
    ```
 
 2. **Verify tool implementations**:
+
    ```bash
    uv run python -c "from src.tools.precedent_search import search_precedents; print('✓ Tools OK')"
    ```
 
 3. **Run with debug logging**:
+
    ```bash
    LOG_LEVEL=DEBUG npx @modelcontextprotocol/inspector uv run main.py
    ```
@@ -415,24 +437,28 @@ mypy src/
 This is a **template implementation**. To make it fully functional:
 
 ### Phase 1: Data Integration
+
 - [ ] Integrate with Indian Kanoon API for case law retrieval
 - [ ] Set up web scraping for Supreme Court/High Court websites
 - [x] Create embeddings for legal documents using sentence-transformers
 - [x] Build vector database with ChromaDB/Pinecone
 
 ### Phase 2: AI Enhancement
+
 - [ ] Implement RAG pipeline with LangChain
 - [ ] Fine-tune prompts for Indian legal context
 - [ ] Add entity extraction (NER) for legal documents
 - [x] Implement semantic search for precedents
 
 ### Phase 3: Document Processing
+
 - [ ] Complete PDF parsing with pdfplumber
 - [ ] Add DOCX support with python-docx
 - [ ] Implement OCR for scanned documents
 - [ ] Create document classification models
 
 ### Phase 4: Advanced Features
+
 - [ ] Multi-language support (Hindi, regional languages)
 - [ ] Case outcome prediction models
 - [ ] Citation network analysis
