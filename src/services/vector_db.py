@@ -6,7 +6,15 @@ import time
 from typing import List, Dict, Optional, Any
 import chromadb
 from chromadb.config import Settings as ChromaSettings
-from sentence_transformers import SentenceTransformer
+
+# Make sentence-transformers import optional
+try:
+    from sentence_transformers import SentenceTransformer
+    HAS_TRANSFORMERS = True
+except ImportError:
+    SentenceTransformer = None
+    HAS_TRANSFORMERS = False
+
 from src.config import settings
 from src.utils.logger import setup_logger
 from src.models.case import CaseLaw
@@ -56,11 +64,13 @@ class VectorDBService:
             try:
                 # Only try to load if running in production or explicitly configured
                 import os
-                if os.environ.get('USE_TRANSFORMERS', 'false').lower() == 'true':
+                use_transformers = os.environ.get('USE_TRANSFORMERS', 'false').lower() == 'true'
+                
+                if use_transformers and HAS_TRANSFORMERS and SentenceTransformer is not None:
                     self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
                     logger.info("Sentence-transformers model loaded successfully")
                 else:
-                    logger.info("Using fallback embedding method (transformers disabled)")
+                    logger.info("Using fallback embedding method (transformers disabled or unavailable)")
                     self.embedding_model = None
             except Exception as model_error:
                 logger.warning(f"Could not load sentence-transformers model: {model_error}")

@@ -28,6 +28,10 @@ dependencies = [
     # MCP Server Dependencies
     "mcp>=1.0.0",
     
+    # HTTP Server Dependencies
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    
     # Database
     "sqlalchemy>=2.0.0",
     "alembic>=1.12.0",
@@ -90,6 +94,8 @@ web = [
 
 [project.scripts]
 wakalat-ai = "src.server:main"
+wakalat-ai-stdio = "src.server:main"
+wakalat-ai-http = "src.http_server:main"
 
 [project.urls]
 Homepage = "https://github.com/BE-project-vesit/Wakalat-AI-Backend"

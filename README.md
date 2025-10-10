@@ -62,6 +62,28 @@ Wakalat-AI-Backend/
 
 ## 🚀 Getting Started
 
+### Server Types
+
+This project provides **two MCP server implementations**:
+
+#### **1. STDIO MCP Server** (`main.py`)
+
+- **Use case**: Local development, Claude Desktop integration
+- **Transport**: stdin/stdout pipes
+- **Pros**: Lightweight, secure, standard MCP approach
+- **Best for**: Desktop apps, local testing
+
+#### **2. HTTP MCP Server** (`http_main.py`)
+
+- **Use case**: Web applications, remote access, microservices
+- **Transport**: HTTP/WebSocket
+- **Pros**: Network accessible, RESTful endpoints, scalable
+- **Best for**: Web apps, cloud deployment, API integration
+- **Endpoints**:
+  - `http://localhost:8000/mcp` - MCP protocol endpoint
+  - `http://localhost:8000/health` - Health check
+  - `http://localhost:8000/docs` - API documentation
+
 ### Prerequisites
 
 - Python 3.12 or higher
@@ -100,13 +122,36 @@ Wakalat-AI-Backend/
 
 5. **Run the MCP server**
 
+   **Option A: STDIO MCP Server (for Claude Desktop)**
+
    ```bash
    uv run main.py
    ```
 
+   **Option B: HTTP MCP Server (for web clients)**
+
+   ```bash
+   uv run http_main.py
+   ```
+
+   Server will be available at: `http://localhost:8000/mcp`
+
 6. **Test with MCP Inspector**
+
+   **For STDIO server:**
+
    ```bash
    npx @modelcontextprotocol/inspector uv run main.py
+   ```
+
+   **For HTTP server:**
+
+   ```bash
+   # Start HTTP server first
+   uv run http_main.py
+
+   # Then test with curl or browser
+   curl http://localhost:8000/health
    ```
 
 #### Option 2: Traditional pip/venv
