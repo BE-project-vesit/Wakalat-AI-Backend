@@ -12,6 +12,7 @@ from pydantic import BaseModel
 import uvicorn
 
 from src.config import settings
+from src.models.mcp_catalog import get_prompts, get_resources
 from src.tools.precedent_search import search_precedents
 from src.tools.case_law_finder import find_case_laws
 from src.tools.document_analyzer import analyze_legal_document
@@ -329,6 +330,8 @@ async def root():
             "health": "/health",
             "tools": "/tools",
             "tools_execute": "/tools/execute",
+            "resources": "/resources",
+            "prompts": "/prompts",
             "docs": "/docs"
         },
         "description": "HTTP-based MCP server for Indian legal assistant tools"
@@ -364,6 +367,50 @@ async def get_tool_info(tool_name: str):
         raise HTTPException(status_code=404, detail=f"Tool '{tool_name}' not found")
     
     return tool
+
+
+@app.get("/resources")
+async def list_resources():
+    """Return available MCP resources."""
+
+    resources = get_resources()
+    logger.info(f"Listed {len(resources)} available resources")
+    return {"resources": resources}
+
+
+@app.get("/resources/{resource_uri}")
+async def get_resource(resource_uri: str):
+    """Return details for a specific resource by URI."""
+
+    resources = get_resources()
+    resource = next((r for r in resources if r["uri"] == resource_uri), None)
+
+    if resource is None:
+        raise HTTPException(status_code=404, detail=f"Resource '{resource_uri}' not found")
+
+    return resource
+
+
+@app.get("/prompts")
+async def list_prompts():
+    """Return available MCP prompt templates."""
+
+    prompts = get_prompts()
+    logger.info(f"Listed {len(prompts)} available prompts")
+    return {"prompts": prompts}
+
+
+@app.get("/prompts/{prompt_name}")
+async def get_prompt(prompt_name: str):
+    """Return details for a specific prompt by name."""
+
+    prompts = get_prompts()
+    prompt = next((p for p in prompts if p["name"] == prompt_name), None)
+
+    if prompt is None:
+        raise HTTPException(status_code=404, detail=f"Prompt '{prompt_name}' not found")
+
+    return prompt
 
 
 # WebSocket endpoint for real-time communication

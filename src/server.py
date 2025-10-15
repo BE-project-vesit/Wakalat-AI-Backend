@@ -15,6 +15,7 @@ from mcp.types import (
 from mcp.server.stdio import stdio_server
 
 from src.config import settings
+from src.models.mcp_catalog import get_prompts, get_resources
 from src.tools.precedent_search import search_precedents
 from src.tools.case_law_finder import find_case_laws
 from src.tools.document_analyzer import analyze_legal_document
@@ -295,39 +296,7 @@ async def list_resources() -> list[dict]:
     """
     List available resources (templates, guidelines, etc.)
     """
-    resources = [
-        {
-            "uri": "template://legal-notice",
-            "name": "Legal Notice Template",
-            "description": "Standard template for legal notices in India",
-            "mimeType": "text/plain"
-        },
-        {
-            "uri": "template://petition",
-            "name": "Petition Template",
-            "description": "Template for drafting petitions",
-            "mimeType": "text/plain"
-        },
-        {
-            "uri": "guide://ipc-sections",
-            "name": "IPC Sections Guide",
-            "description": "Quick reference for Indian Penal Code sections",
-            "mimeType": "text/plain"
-        },
-        {
-            "uri": "guide://crpc-sections",
-            "name": "CrPC Sections Guide",
-            "description": "Quick reference for Criminal Procedure Code sections",
-            "mimeType": "text/plain"
-        },
-        {
-            "uri": "guide://limitation-act",
-            "name": "Limitation Act Reference",
-            "description": "Reference guide for Limitation Act, 1963",
-            "mimeType": "text/plain"
-        }
-    ]
-    
+    resources = get_resources()
     logger.info(f"Listed {len(resources)} available resources")
     return resources
 
@@ -337,57 +306,7 @@ async def list_prompts() -> list[dict]:
     """
     List available prompt templates for common legal tasks
     """
-    prompts = [
-        {
-            "name": "analyze_case_strength",
-            "description": "Analyze the strength of a legal case based on facts and evidence",
-            "arguments": [
-                {
-                    "name": "facts",
-                    "description": "Factual background of the case",
-                    "required": True
-                },
-                {
-                    "name": "evidence",
-                    "description": "Available evidence",
-                    "required": True
-                }
-            ]
-        },
-        {
-            "name": "draft_arguments",
-            "description": "Draft legal arguments for a case",
-            "arguments": [
-                {
-                    "name": "case_type",
-                    "description": "Type of case",
-                    "required": True
-                },
-                {
-                    "name": "facts",
-                    "description": "Factual background",
-                    "required": True
-                },
-                {
-                    "name": "legal_issues",
-                    "description": "Key legal issues",
-                    "required": True
-                }
-            ]
-        },
-        {
-            "name": "legal_opinion",
-            "description": "Provide a legal opinion on a matter",
-            "arguments": [
-                {
-                    "name": "query",
-                    "description": "Legal query or situation",
-                    "required": True
-                }
-            ]
-        }
-    ]
-    
+    prompts = get_prompts()
     logger.info(f"Listed {len(prompts)} available prompts")
     return prompts
 
