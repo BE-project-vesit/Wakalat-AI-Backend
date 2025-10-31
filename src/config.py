@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     chroma_persist_directory: Path = Path("./data/chroma")
     chroma_collection_name: str = "legal_cases"
     
+    # Supabase Configuration
+    supabase_url: Optional[str] = None
+    supabase_key: Optional[str] = None
+    
     # Database
     database_url: str = "sqlite:///./data/wakalat.db"
     
@@ -53,7 +57,7 @@ class Settings(BaseSettings):
     
     # Security
     secret_key: str = "change-this-secret-key-in-production"
-    allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    allowed_origins: str = "http://localhost:3000,http://localhost:5173"
     
     # Feature Flags
     enable_precedent_search: bool = True

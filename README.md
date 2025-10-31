@@ -1,5 +1,15 @@
 # Wakalat-AI Backend - MCP Server
 
+
+## 📝 To-Do
+
+- [ ] Figure out what sql command was done in the supabase database also figure out the enditre   embeddings thing in general  
+- [ ] make HTTP server 
+- [ ] work on the other tools except precedent searcher
+
+
+
+
 A **Model Context Protocol (MCP)** server for assisting lawyers in India with case preparation, precedent finding, case law research, and legal document processing. This backend is frontend-agnostic and designed to work with any MCP-compatible client.
 
 ## 🎯 Overview
