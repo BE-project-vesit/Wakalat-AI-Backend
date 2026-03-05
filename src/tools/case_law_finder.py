@@ -46,7 +46,7 @@ def get_db_connection():
         if not postgres_url:
             raise ValueError("POSTGRES_URL must be set in .env file")
 
-        _db_connection = psycopg2.connect(postgres_url)
+        _db_connection = psycopg2.connect(postgres_url, connect_timeout=10)
         logger.info("PostgreSQL connection established")
 
     return _db_connection
