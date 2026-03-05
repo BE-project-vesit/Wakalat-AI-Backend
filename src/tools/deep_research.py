@@ -10,7 +10,7 @@ Pipeline:
 """
 import asyncio
 import json
-from typing import Literal
+from typing import Any, Callable, Coroutine, Literal, Optional
 
 from src.config import settings
 from src.utils.logger import setup_logger
@@ -332,6 +332,7 @@ async def deep_research(
     research_depth: Literal["brief", "detailed", "comprehensive"] = "detailed",
     include_statutes: bool = True,
     include_case_laws: bool = True,
+    progress_callback: Optional[Callable[..., Coroutine]] = None,
 ) -> str:
     """
     Conduct deep legal research using Gemini + Firecrawl.
@@ -341,11 +342,20 @@ async def deep_research(
         research_depth: Depth of research — brief | detailed | comprehensive
         include_statutes: Include statutory provisions in report
         include_case_laws: Include case law citations in report
+        progress_callback: Optional async callback(progress, total, message) for progress reporting
 
     Returns:
         JSON string with structured research report
     """
     logger.info(f"Deep research started: '{research_query}' depth={research_depth}")
+
+    async def _report(current: int, total: int, message: str):
+        logger.info(message)
+        if progress_callback:
+            try:
+                await progress_callback(current, total, message)
+            except Exception as e:
+                logger.warning(f"Progress callback failed: {e}")
 
     if not settings.gemini_api_key:
         return json.dumps({"error": "GEMINI_API_KEY not configured."})
@@ -357,29 +367,29 @@ async def deep_research(
         firecrawl = _get_firecrawl_client()
 
         # Step 1: Decompose
-        logger.info("Step 1: Decomposing query with Gemini...")
+        await _report(1, 4, "Step 1/4: Decomposing query with Gemini...")
         decomposition = await _decompose_query(gemini, research_query)
-        logger.info(f"Generated {len(decomposition.get('search_terms', []))} search terms")
+        await _report(1, 4, f"Step 1/4 complete: Generated {len(decomposition.get('search_terms', []))} search terms")
 
         # Step 2: Crawl
-        logger.info("Step 2: Crawling legal sources with Firecrawl...")
+        await _report(2, 4, "Step 2/4: Crawling legal sources with Firecrawl...")
         pages = await _crawl_sources(firecrawl, decomposition.get("search_terms", []), research_depth)
-        logger.info(f"Scraped {len(pages)} pages successfully")
+        await _report(2, 4, f"Step 2/4 complete: Scraped {len(pages)} pages successfully")
 
         if not pages:
             logger.warning("No pages scraped; falling back to Gemini-only synthesis")
 
         # Step 3: Extract (parallel)
-        logger.info("Step 3: Extracting legal content from pages...")
+        await _report(3, 4, f"Step 3/4: Extracting legal content from {len(pages)} pages...")
         extraction_tasks = [
             _extract_from_page(gemini, page, research_query) for page in pages
         ]
         raw_extractions = await asyncio.gather(*extraction_tasks)
         extractions = [e for e in raw_extractions if e is not None]
-        logger.info(f"Got {len(extractions)} relevant extractions out of {len(pages)} pages")
+        await _report(3, 4, f"Step 3/4 complete: Got {len(extractions)} relevant extractions out of {len(pages)} pages")
 
         # Step 4: Synthesize
-        logger.info("Step 4: Synthesizing final report with Gemini...")
+        await _report(4, 4, "Step 4/4: Synthesizing final report with Gemini...")
         report = await _synthesize_report(
             gemini, research_query, decomposition, extractions,
             research_depth, include_statutes, include_case_laws
@@ -393,7 +403,7 @@ async def deep_research(
             "research_results": report,
         }
 
-        logger.info("Deep research completed successfully")
+        await _report(4, 4, "Deep research completed successfully")
         return json.dumps(result, indent=2)
 
     except Exception as e:

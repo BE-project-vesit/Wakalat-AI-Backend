@@ -71,6 +71,10 @@ class Settings(BaseSettings):
     # Firecrawl
     firecrawl_api_key: Optional[str] = None
     
+    # Timeout Configuration
+    tool_execution_timeout: int = 300  # seconds (5 min)
+    sse_keepalive_interval: int = 15  # seconds
+
     # Feature Flags
     enable_precedent_search: bool = True
     enable_case_law_search: bool = True

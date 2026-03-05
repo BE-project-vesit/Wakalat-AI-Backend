@@ -677,7 +677,8 @@ def main():
             host="0.0.0.0",
             port=port,
             log_level=settings.log_level.lower(),
-            reload=False
+            reload=False,
+            timeout_keep_alive=settings.tool_execution_timeout,
         )
         server = uvicorn.Server(config)
         asyncio.run(server.serve())

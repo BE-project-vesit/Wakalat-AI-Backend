@@ -289,43 +289,56 @@ async def call_tool(name: str, arguments: Any) -> Sequence[TextContent | ImageCo
     Routes requests to appropriate tool handlers
     """
     logger.info(f"Tool called: {name} with arguments: {arguments}")
-    
+
     try:
         if name == "search_precedents":
             result = await search_precedents(**arguments)
             return [TextContent(type="text", text=result)]
-        
+
         elif name == "find_case_laws":
             result = await find_case_laws(**arguments)
             return [TextContent(type="text", text=result)]
-        
+
         elif name == "analyze_document":
             result = await analyze_legal_document(**arguments)
             return [TextContent(type="text", text=result)]
-        
+
         elif name == "legal_research":
             result = await conduct_legal_research(**arguments)
             return [TextContent(type="text", text=result)]
 
         elif name == "deep_research":
-            result = await deep_research(**arguments)
+            # Build a progress callback that sends MCP log notifications
+            async def _progress_cb(current: int, total: int, message: str):
+                try:
+                    ctx = app.request_context
+                    if ctx and ctx.session:
+                        await ctx.session.send_log_message(
+                            level="info", data=message
+                        )
+                except Exception:
+                    pass  # best-effort; don't break the tool
+
+            result = await deep_research(
+                **arguments, progress_callback=_progress_cb
+            )
             return [TextContent(type="text", text=result)]
 
         elif name == "draft_legal_notice":
             from src.tools.document_drafter import draft_notice
             result = await draft_notice(**arguments)
             return [TextContent(type="text", text=result)]
-        
+
         elif name == "check_limitation":
             from src.tools.limitation_checker import check_limitation_period
             result = await check_limitation_period(**arguments)
             return [TextContent(type="text", text=result)]
-        
+
         else:
             error_msg = f"Unknown tool: {name}"
             logger.error(error_msg)
             return [TextContent(type="text", text=error_msg)]
-    
+
     except Exception as e:
         error_msg = f"Error executing tool {name}: {str(e)}"
         logger.error(error_msg, exc_info=True)
