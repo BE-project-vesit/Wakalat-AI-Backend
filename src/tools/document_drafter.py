@@ -1,10 +1,11 @@
 """
 Document Drafter Tool
-Drafts legal documents like notices, petitions, etc.
+Drafts legal documents like notices, petitions, etc. using LLM
 """
 import json
 from typing import Literal, Optional, Dict, Any
 from datetime import datetime
+from src.tools.llm import call_llm
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -18,102 +19,79 @@ async def draft_notice(
     recipient_details: Optional[Dict[str, Any]] = None
 ) -> str:
     """
-    Draft a legal notice
-    
+    Draft a legal notice using LLM.
+
     Args:
         notice_type: Type of legal notice
         facts: Factual background
         relief_sought: Remedy demanded
         sender_details: Details of sender/client
         recipient_details: Details of recipient
-    
+
     Returns:
         Drafted legal notice text
     """
     logger.info(f"Drafting {notice_type} notice")
-    
+
     try:
-        # TODO: Implement actual notice drafting using:
-        # 1. LLM (OpenAI/Anthropic) with legal notice templates
-        # 2. Structured prompts for different notice types
-        # 3. Template engine for formatting
-        
-        # Placeholder implementation
         current_date = datetime.now().strftime("%B %d, %Y")
-        
-        notice_template = f"""
-LEGAL NOTICE
 
-Date: {current_date}
+        sender_info = "Not provided"
+        if sender_details:
+            sender_info = "\n".join(f"  {k}: {v}" for k, v in sender_details.items())
 
-To,
-[Recipient Name]
-[Recipient Address]
+        recipient_info = "Not provided"
+        if recipient_details:
+            recipient_info = "\n".join(f"  {k}: {v}" for k, v in recipient_details.items())
 
-From,
-[Sender Name]
-[Sender Address]
+        notice_type_guidance = {
+            "demand": "Include specific demand amount, payment deadline, and consequences of non-compliance. Reference relevant provisions of the Indian Contract Act.",
+            "cease_desist": "Clearly identify the infringing activity, demand immediate cessation, and cite relevant IP laws or other applicable statutes.",
+            "termination": "Reference the agreement being terminated, cite the termination clause, specify the effective date, and outline post-termination obligations.",
+            "breach": "Identify the specific breach, reference the breached clauses, quantify damages if applicable, and provide a cure period.",
+            "defamation": "Identify the defamatory statements, specify where/when published, demand retraction and apology, and cite Sections 499-500 IPC.",
+            "other": "Draft a formal legal notice appropriate to the facts provided, citing relevant Indian legal provisions.",
+        }
 
-Subject: Legal Notice - {notice_type.replace('_', ' ').title()}
+        prompt = (
+            f"You are a senior Indian advocate drafting a formal legal notice. Draft a complete, ready-to-send legal notice.\n\n"
+            f"NOTICE TYPE: {notice_type.replace('_', ' ').title()}\n"
+            f"DATE: {current_date}\n\n"
+            f"SENDER DETAILS:\n{sender_info}\n\n"
+            f"RECIPIENT DETAILS:\n{recipient_info}\n\n"
+            f"FACTS OF THE CASE:\n{facts}\n\n"
+            f"RELIEF SOUGHT:\n{relief_sought}\n\n"
+            f"GUIDANCE: {notice_type_guidance[notice_type]}\n\n"
+            f"REQUIREMENTS:\n"
+            f"- Use formal Indian legal notice format\n"
+            f"- Include 'WITHOUT PREJUDICE' header where appropriate\n"
+            f"- Reference specific sections of applicable Indian Acts\n"
+            f"- Use actual sender/recipient details provided (use placeholders like [SENDER NAME] only if details not provided)\n"
+            f"- Include a compliance deadline (typically 15 days)\n"
+            f"- End with consequences of non-compliance\n"
+            f"- Include space for advocate signature with enrollment number\n"
+            f"- Follow Indian Bar Council professional conduct standards\n\n"
+            f"Draft the complete legal notice:"
+        )
 
-Dear Sir/Madam,
+        notice_text = await call_llm(prompt)
 
-FACTS OF THE CASE:
-{facts}
-
-RELIEF SOUGHT:
-{relief_sought}
-
-This notice is issued under the guidance of legal counsel and serves as a formal 
-intimation of the above-mentioned facts and demands.
-
-You are hereby called upon to comply with the demands made herein within 15 days 
-of receipt of this notice, failing which my client shall be constrained to initiate 
-appropriate legal proceedings against you at your risk as to costs and consequences.
-
-Please treat this matter with utmost urgency.
-
-Yours faithfully,
-[Lawyer Name]
-[Lawyer Address]
-[Enrollment Number]
-
----
-
-NOTE: This is a template draft. Customize with actual details and review by 
-qualified legal counsel before sending.
-
-IMPLEMENTATION NOTES:
-1. Use LLM to generate context-appropriate language
-2. Include relevant legal provisions based on notice type
-3. Format according to Indian legal standards
-4. Add case-specific statutory references
-5. Ensure compliance with professional conduct rules
-"""
-        
         result = {
             "notice_type": notice_type,
-            "drafted_notice": notice_template,
+            "drafted_notice": notice_text,
             "metadata": {
                 "draft_date": current_date,
                 "requires_review": True,
-                "customization_needed": [
-                    "Fill in sender details",
-                    "Fill in recipient details",
-                    "Add specific legal provisions",
-                    "Review and adjust language",
-                    "Add lawyer/firm details"
-                ]
+                "sender_details_provided": sender_details is not None,
+                "recipient_details_provided": recipient_details is not None,
             },
-            "note": (
-                "This is a template implementation. "
-                "Use OpenAI/Anthropic with carefully crafted prompts and "
-                "legal notice templates for different types of notices."
-            )
+            "disclaimer": "This draft is AI-generated. Review by qualified legal counsel is mandatory before sending.",
         }
-        
+
         return json.dumps(result, indent=2)
-    
+
     except Exception as e:
         logger.error(f"Error drafting notice: {str(e)}", exc_info=True)
         return json.dumps({"error": str(e)}, indent=2)
+
+

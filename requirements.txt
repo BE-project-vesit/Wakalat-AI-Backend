@@ -1,58 +1,35 @@
-# MCP Server Dependencies
-mcp>=0.1.0
-
-# FastAPI for REST API endpoints (optional, if needed for webhooks)
-fastapi>=0.104.0
-uvicorn>=0.24.0
-
-# Database
-sqlalchemy>=2.0.0
-alembic>=1.12.0
-
-# Vector Database for semantic search
-chromadb>=0.4.0
-# Alternative: pinecone-client>=2.2.0
-
-# LLM Integration
-openai>=1.3.0
-# Alternative: anthropic>=0.7.0
-
-# Document Processing
-pypdf2>=3.0.0
-python-docx>=1.0.0
-pdfplumber>=0.10.0
-
-# Text Processing
-langchain>=0.1.0
-langchain-community>=0.0.10
-
-# Embeddings
-sentence-transformers>=2.2.0
-
-# Web Scraping (for fetching case laws)
-beautifulsoup4>=4.12.0
-requests>=2.31.0
-aiohttp>=3.9.0
-
-# Indian Legal System specific
-indic-nlp-library>=0.92
-# For handling Indian languages if needed
-
-# Utilities
-python-dotenv>=1.0.0
+# Core server
+fastapi>=0.115.0
+uvicorn>=0.22.0
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
+python-dotenv>=1.0.0
 python-multipart>=0.0.6
 
-# Logging and Monitoring
+# MCP
+mcp>=0.1.0
+
+# LLM — Gemini (primary)
+google-genai>=0.7.0
+
+# Document processing
+pdfplumber>=0.10.0
+PyPDF2>=3.0.0
+python-docx>=1.0.0
+
+# Web scraping (precedent search)
+requests>=2.31.0
+aiohttp>=3.9.0
+beautifulsoup4>=4.12.0
+
+# Database (case law vector search — optional)
+psycopg2-binary>=2.9.0
+
+# Auth
+PyJWT>=2.8.0
+
+# Logging
 loguru>=0.7.0
 
-# Testing
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
+# HTTP client
 httpx>=0.25.0
-
-# Code Quality
-black>=23.0.0
-flake8>=6.0.0
-mypy>=1.0.0

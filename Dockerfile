@@ -1,4 +1,3 @@
-# Dockerfile for Wakalat-AI Backend MCP Server
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -6,7 +5,7 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
-    curl \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
@@ -23,8 +22,8 @@ RUN mkdir -p data/chroma data/documents logs
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
-# Expose port (if using FastAPI alongside MCP)
+# Render uses PORT env var
 EXPOSE 8000
 
-# Run the MCP server
-CMD ["python", "-m", "src.server"]
+# Run the HTTP server (Render needs a web service, not stdio)
+CMD ["python", "http_main.py"]

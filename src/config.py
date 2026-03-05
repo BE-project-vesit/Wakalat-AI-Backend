@@ -16,10 +16,13 @@ class Settings(BaseSettings):
     mcp_server_port: int = 8000
     
     # AI Model Configuration
+    gemini_api_key: Optional[str] = None
+    gemini_model: str = "gemini-3.1-flash"
+
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4-turbo-preview"
     openai_embedding_model: str = "text-embedding-3-small"
-    
+
     anthropic_api_key: Optional[str] = None
     anthropic_model: str = "claude-3-opus-20240229"
 
@@ -34,9 +37,8 @@ class Settings(BaseSettings):
     chroma_persist_directory: Path = Path("./data/chroma")
     chroma_collection_name: str = "legal_cases"
     
-    # Supabase Configuration
-    supabase_url: Optional[str] = None
-    supabase_key: Optional[str] = None
+    # PostgreSQL Configuration (for vector search)
+    postgres_url: Optional[str] = None
     
     # Database
     database_url: str = "sqlite:///./data/wakalat.db"
@@ -65,6 +67,9 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = "change-this-secret-key-in-production"
     allowed_origins: str = "http://localhost:3000,http://localhost:5173"
+
+    # Firecrawl
+    firecrawl_api_key: Optional[str] = None
     
     # Feature Flags
     enable_precedent_search: bool = True
@@ -73,6 +78,11 @@ class Settings(BaseSettings):
     enable_legal_research: bool = True
     enable_deep_research: bool = True
     
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        """Return allowed_origins as a list for CORS middleware."""
+        return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

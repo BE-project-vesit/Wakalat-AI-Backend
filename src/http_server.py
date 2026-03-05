@@ -1,11 +1,12 @@
 """
 HTTP MCP Server Implementation for Wakalat-AI
-Provides the same tools as stdio server but over HTTP/WebSocket
+Provides the same tools as stdio server but over HTTP/WebSocket/SSE
+Includes JWT authentication and MCP SSE transport for Claude Code integration
 """
 import asyncio
 import json
 from typing import Any, Dict, List, Optional
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -14,7 +15,7 @@ import uvicorn
 
 from mcp.server.sse import SseServerTransport
 from src.config import settings
-from src.server import app as mcp_server
+from src.auth import create_access_token, get_current_user, verify_token_from_header
 from src.tools.precedent_search import search_precedents
 from src.tools.case_law_finder import find_case_laws
 from src.tools.document_analyzer import analyze_legal_document
@@ -28,7 +29,7 @@ logger = setup_logger(__name__)
 # Create FastAPI app
 app = FastAPI(
     title="Wakalat-AI MCP Server",
-    description="HTTP MCP Server for Legal Assistant Tools",
+    description="HTTP MCP Server for Legal Assistant Tools with JWT Auth and SSE MCP Transport",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -37,7 +38,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -63,7 +64,18 @@ async def handle_sse(request: Request):
 app.mount("/messages/", app=sse_transport.handle_post_message)
 
 
-# Pydantic models for requests/responses
+# ── Pydantic models ──────────────────────────────────────────────────────────
+
+class TokenRequest(BaseModel):
+    email: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    email: str
+
+
 class ToolCall(BaseModel):
     name: str
     arguments: Dict[str, Any]
@@ -85,11 +97,12 @@ class ListToolsResponse(BaseModel):
     tools: List[Tool]
 
 
-# MCP Tool definitions
+# ── MCP Tool definitions ─────────────────────────────────────────────────────
+
 def get_available_tools() -> List[Tool]:
     """Get list of available MCP tools"""
     tools = []
-    
+
     if settings.enable_precedent_search:
         tools.append(Tool(
             name="search_precedents",
@@ -129,7 +142,7 @@ def get_available_tools() -> List[Tool]:
                 "required": ["query"]
             }
         ))
-    
+
     if settings.enable_case_law_search:
         tools.append(Tool(
             name="find_case_laws",
@@ -162,7 +175,7 @@ def get_available_tools() -> List[Tool]:
                 "required": []
             }
         ))
-    
+
     if settings.enable_document_generation:
         tools.append(Tool(
             name="analyze_document",
@@ -193,7 +206,7 @@ def get_available_tools() -> List[Tool]:
                 "required": ["document_path", "document_type"]
             }
         ))
-    
+
     if settings.enable_legal_research:
         tools.append(Tool(
             name="legal_research",
@@ -330,24 +343,24 @@ def get_available_tools() -> List[Tool]:
             }
         )
     ])
-    
+
     return tools
 
 
 async def execute_tool(name: str, arguments: Dict[str, Any]) -> str:
     """Execute a tool and return the result"""
     logger.info(f"Executing tool: {name} with arguments: {arguments}")
-    
+
     try:
         if name == "search_precedents":
             return await search_precedents(**arguments)
-        
+
         elif name == "find_case_laws":
             return await find_case_laws(**arguments)
-        
+
         elif name == "analyze_document":
             return await analyze_legal_document(**arguments)
-        
+
         elif name == "legal_research":
             return await conduct_legal_research(**arguments)
 
@@ -357,20 +370,21 @@ async def execute_tool(name: str, arguments: Dict[str, Any]) -> str:
         elif name == "draft_legal_notice":
             from src.tools.document_drafter import draft_notice
             return await draft_notice(**arguments)
-        
+
         elif name == "check_limitation":
             from src.tools.limitation_checker import check_limitation_period
             return await check_limitation_period(**arguments)
-        
+
         else:
             raise ValueError(f"Unknown tool: {name}")
-    
+
     except Exception as e:
         logger.error(f"Error executing tool {name}: {str(e)}", exc_info=True)
         raise
 
 
-# API Endpoints
+# ── Public endpoints (no auth) ───────────────────────────────────────────────
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -390,28 +404,44 @@ async def root():
         "version": settings.mcp_server_version,
         "endpoints": {
             "health": "/health",
-            "tools": "/tools",
-            "tools_execute": "/tools/execute",
-            "sse": "/sse",
-            "messages": "/messages/",
+            "auth_token": "POST /auth/token",
+            "tools": "/tools (auth required)",
+            "tools_execute": "POST /tools/execute (auth required)",
+            "mcp_sse": "/sse (auth required, for Claude Code)",
             "docs": "/docs"
         },
         "description": "HTTP-based MCP server for Indian legal assistant tools"
     }
 
 
+@app.post("/auth/token", response_model=TokenResponse)
+async def generate_token(request: TokenRequest):
+    """Generate an access token for the given email. Use this token to access all protected endpoints."""
+    if not request.email or "@" not in request.email:
+        raise HTTPException(status_code=400, detail="Valid email is required")
+
+    token = create_access_token(request.email)
+    return TokenResponse(
+        access_token=token,
+        email=request.email,
+    )
+
+
+# ── Protected endpoints (auth required) ──────────────────────────────────────
+
 @app.get("/tools", response_model=ListToolsResponse)
-async def list_tools():
-    """List all available tools"""
+async def list_tools(user: dict = Depends(get_current_user)):
+    """List all available tools (auth required)"""
     tools = get_available_tools()
-    logger.info(f"Listed {len(tools)} available tools")
+    logger.info(f"[{user['sub']}] Listed {len(tools)} available tools")
     return ListToolsResponse(tools=tools)
 
 
 @app.post("/tools/execute", response_model=ToolResponse)
-async def execute_tool_endpoint(tool_call: ToolCall):
-    """Execute a specific tool"""
+async def execute_tool_endpoint(tool_call: ToolCall, user: dict = Depends(get_current_user)):
+    """Execute a specific tool (auth required)"""
     try:
+        logger.info(f"[{user['sub']}] Executing tool: {tool_call.name}")
         result = await execute_tool(tool_call.name, tool_call.arguments)
         return ToolResponse(success=True, result=result)
     except Exception as e:
@@ -420,34 +450,181 @@ async def execute_tool_endpoint(tool_call: ToolCall):
 
 
 @app.get("/tools/{tool_name}")
-async def get_tool_info(tool_name: str):
-    """Get information about a specific tool"""
+async def get_tool_info(tool_name: str, user: dict = Depends(get_current_user)):
+    """Get information about a specific tool (auth required)"""
     tools = get_available_tools()
     tool = next((t for t in tools if t.name == tool_name), None)
-    
+
     if not tool:
         raise HTTPException(status_code=404, detail=f"Tool '{tool_name}' not found")
-    
+
     return tool
 
 
-# WebSocket endpoint for real-time communication
+# ── MCP SSE Transport (for Claude Code / agentic frontends) ──────────────────
+
+@app.get("/sse")
+async def sse_endpoint(request: Request):
+    """
+    MCP SSE transport endpoint for agentic frontends like Claude Code.
+    Requires Bearer token in Authorization header.
+
+    Configure in Claude Code settings:
+    {
+        "mcpServers": {
+            "wakalat-ai": {
+                "type": "sse",
+                "url": "https://wakalat-ai-backend.onrender.com/sse",
+                "headers": {
+                    "Authorization": "Bearer <your-token>"
+                }
+            }
+        }
+    }
+    """
+    from starlette.responses import StreamingResponse
+
+    # Verify auth
+    auth_header = request.headers.get("authorization")
+    user = verify_token_from_header(auth_header)
+    logger.info(f"[{user['sub']}] SSE MCP connection established")
+
+    async def event_stream():
+        # Send initial endpoint info so client knows where to POST messages
+        endpoint_url = str(request.url_for("sse_messages"))
+        yield f"event: endpoint\ndata: {endpoint_url}\n\n"
+
+        # Keep connection alive
+        try:
+            while True:
+                await asyncio.sleep(15)
+                yield ": keepalive\n\n"
+        except asyncio.CancelledError:
+            logger.info(f"[{user['sub']}] SSE connection closed")
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+# Store for pending SSE message responses
+_sse_sessions: Dict[str, asyncio.Queue] = {}
+
+
+@app.post("/sse/messages", name="sse_messages")
+async def sse_messages(request: Request):
+    """Handle MCP JSON-RPC messages from SSE clients"""
+    auth_header = request.headers.get("authorization")
+    user = verify_token_from_header(auth_header)
+
+    body = await request.json()
+    method = body.get("method", "")
+    msg_id = body.get("id")
+    params = body.get("params", {})
+
+    logger.info(f"[{user['sub']}] MCP request: {method}")
+
+    # Handle MCP JSON-RPC methods
+    if method == "initialize":
+        return JSONResponse({
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "result": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {
+                    "tools": {"listChanged": False},
+                },
+                "serverInfo": {
+                    "name": settings.mcp_server_name,
+                    "version": settings.mcp_server_version,
+                }
+            }
+        })
+
+    elif method == "notifications/initialized":
+        return JSONResponse({"jsonrpc": "2.0", "id": msg_id, "result": {}})
+
+    elif method == "tools/list":
+        tools = get_available_tools()
+        return JSONResponse({
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "result": {
+                "tools": [
+                    {
+                        "name": t.name,
+                        "description": t.description,
+                        "inputSchema": t.inputSchema,
+                    }
+                    for t in tools
+                ]
+            }
+        })
+
+    elif method == "tools/call":
+        tool_name = params.get("name", "")
+        arguments = params.get("arguments", {})
+
+        try:
+            result = await execute_tool(tool_name, arguments)
+            return JSONResponse({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {
+                    "content": [
+                        {"type": "text", "text": result}
+                    ]
+                }
+            })
+        except Exception as e:
+            return JSONResponse({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {
+                    "content": [
+                        {"type": "text", "text": f"Error: {str(e)}"}
+                    ],
+                    "isError": True,
+                }
+            })
+
+    elif method == "ping":
+        return JSONResponse({"jsonrpc": "2.0", "id": msg_id, "result": {}})
+
+    else:
+        return JSONResponse({
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "error": {
+                "code": -32601,
+                "message": f"Method not found: {method}"
+            }
+        })
+
+
+# ── WebSocket endpoint ────────────────────────────────────────────────────────
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time MCP communication"""
     await websocket.accept()
     logger.info("WebSocket connection established")
-    
+
     try:
         while True:
-            # Receive message from client
             data = await websocket.receive_text()
             message = json.loads(data)
-            
+
             if message.get("type") == "tool_call":
                 tool_name = message.get("name")
                 arguments = message.get("arguments", {})
-                
+
                 try:
                     result = await execute_tool(tool_name, arguments)
                     response = {
@@ -461,9 +638,9 @@ async def websocket_endpoint(websocket: WebSocket):
                         "success": False,
                         "error": str(e)
                     }
-                
+
                 await websocket.send_text(json.dumps(response))
-            
+
             elif message.get("type") == "list_tools":
                 tools = get_available_tools()
                 response = {
@@ -471,13 +648,13 @@ async def websocket_endpoint(websocket: WebSocket):
                     "tools": [tool.dict() for tool in tools]
                 }
                 await websocket.send_text(json.dumps(response))
-            
+
             else:
                 await websocket.send_text(json.dumps({
                     "type": "error",
                     "message": "Unknown message type"
                 }))
-                
+
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")
     except Exception as e:
@@ -488,15 +665,17 @@ def main():
     """
     Main entry point for the HTTP MCP server
     """
+    import os
+    port = int(os.environ.get("PORT", settings.mcp_server_port))
     logger.info(f"Starting HTTP MCP Server: {settings.mcp_server_name} v{settings.mcp_server_version}")
-    logger.info(f"Server will be available at: http://localhost:{settings.mcp_server_port}")
-    logger.info(f"API Documentation: http://localhost:{settings.mcp_server_port}/docs")
-    
+    logger.info(f"Server will be available at: http://0.0.0.0:{port}")
+    logger.info(f"API Documentation: http://0.0.0.0:{port}/docs")
+
     try:
         config = uvicorn.Config(
             app=app,
             host="0.0.0.0",
-            port=settings.mcp_server_port,
+            port=port,
             log_level=settings.log_level.lower(),
             reload=False
         )
