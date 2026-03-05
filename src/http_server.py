@@ -15,11 +15,7 @@ import uvicorn
 
 from mcp.server.sse import SseServerTransport
 from src.config import settings
-<<<<<<< feat/auth-mcp-sse
 from src.auth import create_access_token, get_current_user, verify_token_from_header
-=======
-from src.server import app as mcp_server
->>>>>>> main
 from src.tools.precedent_search import search_precedents
 from src.tools.case_law_finder import find_case_laws
 from src.tools.document_analyzer import analyze_legal_document
@@ -367,17 +363,10 @@ async def root():
         "version": settings.mcp_server_version,
         "endpoints": {
             "health": "/health",
-<<<<<<< feat/auth-mcp-sse
             "auth_token": "POST /auth/token",
             "tools": "/tools (auth required)",
             "tools_execute": "POST /tools/execute (auth required)",
             "mcp_sse": "/sse (auth required, for Claude Code)",
-=======
-            "tools": "/tools",
-            "tools_execute": "/tools/execute",
-            "sse": "/sse",
-            "messages": "/messages/",
->>>>>>> main
             "docs": "/docs"
         },
         "description": "HTTP-based MCP server for Indian legal assistant tools"
