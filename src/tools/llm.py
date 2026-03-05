@@ -11,7 +11,10 @@ async def call_llm(prompt: str, max_tokens: int = 3000) -> str:
     if settings.gemini_api_key:
         from google import genai
 
-        client = genai.Client(api_key=settings.gemini_api_key)
+        client = genai.Client(
+            api_key=settings.gemini_api_key,
+            http_options={"api_version": "v1beta"},
+        )
         response = client.models.generate_content(
             model=settings.gemini_model,
             contents=prompt,

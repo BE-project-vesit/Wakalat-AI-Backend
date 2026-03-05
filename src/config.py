@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = "change-this-secret-key-in-production"
     allowed_origins: str = "http://localhost:3000,http://localhost:5173"
+
+    # Firecrawl
+    firecrawl_api_key: Optional[str] = None
     
     # Feature Flags
     enable_precedent_search: bool = True
