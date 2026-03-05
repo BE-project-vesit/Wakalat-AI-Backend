@@ -9,9 +9,12 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from starlette.requests import Request
 import uvicorn
 
+from mcp.server.sse import SseServerTransport
 from src.config import settings
+from src.server import app as mcp_server
 from src.tools.precedent_search import search_precedents
 from src.tools.case_law_finder import find_case_laws
 from src.tools.document_analyzer import analyze_legal_document
@@ -38,6 +41,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# SSE transport for MCP protocol over HTTP
+sse_transport = SseServerTransport("/messages/")
+
+
+@app.get("/sse")
+async def handle_sse(request: Request):
+    """SSE endpoint for MCP protocol communication"""
+    async with sse_transport.connect_sse(
+        request.scope, request.receive, request._send
+    ) as (read_stream, write_stream):
+        await mcp_server.run(
+            read_stream,
+            write_stream,
+            mcp_server.create_initialization_options(),
+        )
+
+
+app.mount("/messages/", app=sse_transport.handle_post_message)
 
 
 # Pydantic models for requests/responses
@@ -329,6 +351,8 @@ async def root():
             "health": "/health",
             "tools": "/tools",
             "tools_execute": "/tools/execute",
+            "sse": "/sse",
+            "messages": "/messages/",
             "docs": "/docs"
         },
         "description": "HTTP-based MCP server for Indian legal assistant tools"
