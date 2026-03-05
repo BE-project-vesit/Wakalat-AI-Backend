@@ -33,7 +33,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -423,15 +423,17 @@ def main():
     """
     Main entry point for the HTTP MCP server
     """
+    import os
+    port = int(os.environ.get("PORT", settings.mcp_server_port))
     logger.info(f"Starting HTTP MCP Server: {settings.mcp_server_name} v{settings.mcp_server_version}")
-    logger.info(f"Server will be available at: http://localhost:{settings.mcp_server_port}")
-    logger.info(f"API Documentation: http://localhost:{settings.mcp_server_port}/docs")
-    
+    logger.info(f"Server will be available at: http://0.0.0.0:{port}")
+    logger.info(f"API Documentation: http://0.0.0.0:{port}/docs")
+
     try:
         config = uvicorn.Config(
             app=app,
             host="0.0.0.0",
-            port=settings.mcp_server_port,
+            port=port,
             log_level=settings.log_level.lower(),
             reload=False
         )
