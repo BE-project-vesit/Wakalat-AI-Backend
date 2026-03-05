@@ -6,7 +6,8 @@
       "Bash(uv:*)",
       "Bash(curl:*)",
       "Bash(.venv/Scripts/python.exe:*)",
-      "Bash(\"/c/Users/aryan/AppData/Local/Programs/Python/Python312/python.exe\":*)"
+      "Bash(\"/c/Users/aryan/AppData/Local/Programs/Python/Python312/python.exe\":*)",
+      "Bash(python:*)"
     ]
   }
 }

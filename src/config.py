@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     secret_key: str = "change-this-secret-key-in-production"
     allowed_origins: str = "http://localhost:3000,http://localhost:5173"
     
+    # Timeout Configuration
+    tool_execution_timeout: int = 300  # seconds (5 min)
+    sse_keepalive_interval: int = 15  # seconds
+
     # Feature Flags
     enable_precedent_search: bool = True
     enable_case_law_search: bool = True
