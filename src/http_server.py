@@ -19,6 +19,7 @@ from src.tools.precedent_search import search_precedents
 from src.tools.case_law_finder import find_case_laws
 from src.tools.document_analyzer import analyze_legal_document
 from src.tools.legal_research import conduct_legal_research
+from src.tools.deep_research import deep_research
 from src.utils.logger import setup_logger
 
 # Initialize logger
@@ -229,6 +230,43 @@ def get_available_tools() -> List[Tool]:
             }
         ))
     
+    if settings.enable_deep_research:
+        tools.append(Tool(
+            name="deep_research",
+            description=(
+                "Conduct deep legal research using AI-powered web crawling of Indian legal sources. "
+                "Automatically searches IndianKanoon and other legal databases, scrapes relevant "
+                "judgments and statutes, and synthesizes a comprehensive research report. "
+                "More thorough than legal_research — use when you need real, cited sources."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "research_query": {
+                        "type": "string",
+                        "description": "The legal question or topic to research"
+                    },
+                    "research_depth": {
+                        "type": "string",
+                        "enum": ["brief", "detailed", "comprehensive"],
+                        "description": "Depth of research: brief (fast), detailed (default), comprehensive (thorough)",
+                        "default": "detailed"
+                    },
+                    "include_statutes": {
+                        "type": "boolean",
+                        "description": "Include relevant statutory provisions",
+                        "default": True
+                    },
+                    "include_case_laws": {
+                        "type": "boolean",
+                        "description": "Include relevant case law citations",
+                        "default": True
+                    }
+                },
+                "required": ["research_query"]
+            }
+        ))
+
     # Additional utility tools
     tools.extend([
         Tool(
@@ -312,7 +350,10 @@ async def execute_tool(name: str, arguments: Dict[str, Any]) -> str:
         
         elif name == "legal_research":
             return await conduct_legal_research(**arguments)
-        
+
+        elif name == "deep_research":
+            return await deep_research(**arguments)
+
         elif name == "draft_legal_notice":
             from src.tools.document_drafter import draft_notice
             return await draft_notice(**arguments)
