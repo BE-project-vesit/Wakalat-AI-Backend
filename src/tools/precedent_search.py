@@ -98,7 +98,7 @@ async def search_precedents(
             },
             "source": "IndianKanoon via Firecrawl",
             "search_url": search_url,
-            "content": content[:2000] + "..." if len(content) > 2000 else content,
+            "content": content[:5000] + "..." if len(content) > 5000 else content,
             "full_content_length": len(content),
             "search_metadata": {
                 "api_used": "Firecrawl",

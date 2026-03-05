@@ -3,7 +3,7 @@
     "wakalat-ai": {
       "command": "uv",
       "args": ["run", "main.py"],
-      "cwd": "D:\\projects\\python\\mcp\\wakalat\\Wakalat-AI-Backend"
+      "cwd": "F:/code n shit/Wakalat-AI-Backend"
     }
   }
 }
