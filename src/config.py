@@ -25,6 +25,13 @@ class Settings(BaseSettings):
 
     anthropic_api_key: Optional[str] = None
     anthropic_model: str = "claude-3-opus-20240229"
+
+    # Gemini Configuration (for Deep Research)
+    gemini_api_key: Optional[str] = None
+    gemini_model: str = "gemini-2.0-flash"
+
+    # Firecrawl Configuration (for Deep Research)
+    firecrawl_api_key: Optional[str] = None
     
     # Vector Database
     chroma_persist_directory: Path = Path("./data/chroma")
@@ -69,6 +76,7 @@ class Settings(BaseSettings):
     enable_case_law_search: bool = True
     enable_document_generation: bool = True
     enable_legal_research: bool = True
+    enable_deep_research: bool = True
     
     @property
     def allowed_origins_list(self) -> list[str]:
