@@ -14,6 +14,7 @@ from starlette.requests import Request
 import uvicorn
 
 from mcp.server.sse import SseServerTransport
+from src.server import app as mcp_app  # MCP Server instance for SSE transport
 from src.config import settings
 from src.auth import create_access_token, get_current_user, verify_token_from_header
 from src.tools.precedent_search import search_precedents
@@ -50,14 +51,20 @@ sse_transport = SseServerTransport("/messages/")
 
 @app.get("/sse")
 async def handle_sse(request: Request):
-    """SSE endpoint for MCP protocol communication"""
+    """SSE endpoint for MCP protocol communication (used by SSEClientTransport)"""
+    # Verify auth — token must be passed via query param or header
+    auth_header = request.headers.get("authorization")
+    if auth_header:
+        user = verify_token_from_header(auth_header)
+        logger.info(f"[{user['sub']}] SSE MCP connection established")
+
     async with sse_transport.connect_sse(
         request.scope, request.receive, request._send
     ) as (read_stream, write_stream):
-        await mcp_server.run(
+        await mcp_app.run(
             read_stream,
             write_stream,
-            mcp_server.create_initialization_options(),
+            mcp_app.create_initialization_options(),
         )
 
 
@@ -461,151 +468,11 @@ async def get_tool_info(tool_name: str, user: dict = Depends(get_current_user)):
     return tool
 
 
-# ── MCP SSE Transport (for Claude Code / agentic frontends) ──────────────────
 
-@app.get("/sse")
-async def sse_endpoint(request: Request):
-    """
-    MCP SSE transport endpoint for agentic frontends like Claude Code.
-    Requires Bearer token in Authorization header.
-
-    Configure in Claude Code settings:
-    {
-        "mcpServers": {
-            "wakalat-ai": {
-                "type": "sse",
-                "url": "https://wakalat-ai-backend.onrender.com/sse",
-                "headers": {
-                    "Authorization": "Bearer <your-token>"
-                }
-            }
-        }
-    }
-    """
-    from starlette.responses import StreamingResponse
-
-    # Verify auth
-    auth_header = request.headers.get("authorization")
-    user = verify_token_from_header(auth_header)
-    logger.info(f"[{user['sub']}] SSE MCP connection established")
-
-    async def event_stream():
-        # Send initial endpoint info so client knows where to POST messages
-        endpoint_url = str(request.url_for("sse_messages"))
-        yield f"event: endpoint\ndata: {endpoint_url}\n\n"
-
-        # Keep connection alive
-        try:
-            while True:
-                await asyncio.sleep(15)
-                yield ": keepalive\n\n"
-        except asyncio.CancelledError:
-            logger.info(f"[{user['sub']}] SSE connection closed")
-
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        }
-    )
-
-
-# Store for pending SSE message responses
-_sse_sessions: Dict[str, asyncio.Queue] = {}
-
-
-@app.post("/sse/messages", name="sse_messages")
-async def sse_messages(request: Request):
-    """Handle MCP JSON-RPC messages from SSE clients"""
-    auth_header = request.headers.get("authorization")
-    user = verify_token_from_header(auth_header)
-
-    body = await request.json()
-    method = body.get("method", "")
-    msg_id = body.get("id")
-    params = body.get("params", {})
-
-    logger.info(f"[{user['sub']}] MCP request: {method}")
-
-    # Handle MCP JSON-RPC methods
-    if method == "initialize":
-        return JSONResponse({
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "result": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {
-                    "tools": {"listChanged": False},
-                },
-                "serverInfo": {
-                    "name": settings.mcp_server_name,
-                    "version": settings.mcp_server_version,
-                }
-            }
-        })
-
-    elif method == "notifications/initialized":
-        return JSONResponse({"jsonrpc": "2.0", "id": msg_id, "result": {}})
-
-    elif method == "tools/list":
-        tools = get_available_tools()
-        return JSONResponse({
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "result": {
-                "tools": [
-                    {
-                        "name": t.name,
-                        "description": t.description,
-                        "inputSchema": t.inputSchema,
-                    }
-                    for t in tools
-                ]
-            }
-        })
-
-    elif method == "tools/call":
-        tool_name = params.get("name", "")
-        arguments = params.get("arguments", {})
-
-        try:
-            result = await execute_tool(tool_name, arguments)
-            return JSONResponse({
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {
-                    "content": [
-                        {"type": "text", "text": result}
-                    ]
-                }
-            })
-        except Exception as e:
-            return JSONResponse({
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": {
-                    "content": [
-                        {"type": "text", "text": f"Error: {str(e)}"}
-                    ],
-                    "isError": True,
-                }
-            })
-
-    elif method == "ping":
-        return JSONResponse({"jsonrpc": "2.0", "id": msg_id, "result": {}})
-
-    else:
-        return JSONResponse({
-            "jsonrpc": "2.0",
-            "id": msg_id,
-            "error": {
-                "code": -32601,
-                "message": f"Method not found: {method}"
-            }
-        })
+# NOTE: The SSE MCP transport is handled by SseServerTransport at the top of this file.
+# GET /sse → handle_sse() uses sse_transport.connect_sse + mcp_app
+# POST /messages/ → mounted via sse_transport.handle_post_message
+# This properly implements the MCP SSE protocol so SSEClientTransport works correctly.
 
 
 # ── WebSocket endpoint ────────────────────────────────────────────────────────
