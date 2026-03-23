@@ -1,0 +1,3 @@
+task_id,system_label,annotator_id,run_id,legal_accuracy_1_5,completeness_1_5,grounding_1_5,clarity_1_5,misleading_risk_1_5,comments
+lim_money_lent_article,A,anon,20250101T000000Z_abc,,,,,,
+lim_money_lent_article,B,anon,20250101T000000Z_abc,,,,,,

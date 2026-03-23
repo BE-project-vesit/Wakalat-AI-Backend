@@ -1,0 +1,83 @@
+# Metric definitions and aggregation for Wakalat MCP benchmark runs.
+# Consumed by eval/run_benchmark.py for reporting; extend as you add scorers.
+
+version: "1"
+
+metrics:
+  verifiable_accuracy:
+    description: >
+      Fraction of tasks with at least one verifiable_fact where all facts pass.
+      Tasks with empty verifiable_facts are excluded from numerator and denominator.
+    type: rate
+    range: [0.0, 1.0]
+
+  verifiable_fact_pass_rate:
+    description: >
+      Fraction of individual verifiable facts that passed across all tasks
+      (includes tasks with multiple facts).
+    type: rate
+    range: [0.0, 1.0]
+
+  citation_integrity:
+    description: >
+      Reserved for automated citation-existence checks (Indian Kanoon, etc.).
+      Not computed unless tasks define citation_checks; reported as null when absent.
+    type: rate
+    optional: true
+
+  tool_appropriateness:
+    description: >
+      For end_to_end traces: fraction of runs where the first (or primary) tool call
+      matches task.expected_tool. Requires agent trace capture (not implemented in tool_only runner).
+    type: rate
+    optional: true
+
+  latency_ms_p50:
+    description: Median wall-clock time per task (successful tool invocation).
+    type: duration_ms
+    aggregation: percentile
+    percentile: 50
+
+  latency_ms_p95:
+    description: 95th percentile wall-clock time per task.
+    type: duration_ms
+    aggregation: percentile
+    percentile: 95
+
+  error_rate:
+    description: Fraction of tasks that raised an exception or returned unparsable output.
+    type: rate
+
+  cost_usd_total:
+    description: Placeholder for token-based cost when LLM usage is metered in the runner.
+    type: sum
+    optional: true
+
+aggregation:
+  primary_dashboard:
+    description: Recommended rows for comparing releases or baselines (e.g. Niyam).
+    metrics:
+      - verifiable_accuracy
+      - verifiable_fact_pass_rate
+      - error_rate
+      - latency_ms_p50
+      - latency_ms_p95
+
+human_rubrics:
+  legal_quality_v1:
+    scale: likert_1_5
+    dimensions:
+      - id: legal_accuracy
+        question: "Is the substantive legal answer correct for Indian law?"
+      - id: completeness
+        question: "Does the answer cover the issues implied by the prompt?"
+      - id: grounding
+        question: "Are sources/citations appropriate and not obviously fabricated?"
+      - id: clarity
+        question: "Is the answer clear and usable for a practising lawyer?"
+      - id: misleading_risk
+        question: "Low score = high risk of misleading the user on a material point."
+        invert_for_quality: true
+    instructions: >
+      Use templates/human_rubric_template.csv. For blinded head-to-head (Wakalat vs Niyam),
+      shuffle labels A/B per task; see NIYAM_BASELINE.md.

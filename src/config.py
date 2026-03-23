@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     
     # Indian Legal Resources
     indiankanoon_base_url: str = "https://indiankanoon.org"
+    # Official JSON API — https://api.indiankanoon.org/documentation/
+    indiankanoon_api_token: Optional[str] = None
     supreme_court_api_url: str = "https://api.sci.gov.in"
     high_court_api_url: str = "https://example-highcourt-api.gov.in"
     

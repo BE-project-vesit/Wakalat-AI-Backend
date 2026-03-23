@@ -1,0 +1,106 @@
+# Wakalat MCP benchmark tasks (versioned dataset).
+# Schema validated by eval.models.BenchmarkTask / BenchmarkSuite.
+
+version: "1"
+
+tasks:
+  - id: lim_money_lent_article
+    prompt: "What is the limitation period for a suit for money lent under the Limitation Act, 1963 if the cause of action arose on 2020-01-01?"
+    scope: tool_only
+    tool: check_limitation
+    tool_args:
+      case_type: suit_for_money_lent
+      cause_of_action_date: "2020-01-01"
+    verifiable_facts:
+      - json_path: article_reference
+        equals: "54"
+      - json_path: matched_category
+        equals: suit_for_money_lent
+    expected_tool: check_limitation
+    rubric_id: legal_quality_v1
+    difficulty: easy
+    domain_tags: [civil, limitation]
+    requires_network: false
+
+  - id: lim_motor_accident_years
+    prompt: "Limitation for a motor accident claim from cause of action date 2021-06-15."
+    scope: tool_only
+    tool: check_limitation
+    tool_args:
+      case_type: motor_accident_claim
+      cause_of_action_date: "2021-06-15"
+    verifiable_facts:
+      - json_path: article_reference
+        contains: "Motor Vehicles"
+    expected_tool: check_limitation
+    rubric_id: legal_quality_v1
+    difficulty: easy
+    domain_tags: [tort, limitation]
+    requires_network: false
+
+  - id: lim_defamation_one_year
+    prompt: "Defamation suit limitation from 2023-03-01."
+    scope: tool_only
+    tool: check_limitation
+    tool_args:
+      case_type: defamation_suit
+      cause_of_action_date: "2023-03-01"
+    verifiable_facts:
+      - json_path: article_reference
+        equals: "74"
+    expected_tool: check_limitation
+    rubric_id: legal_quality_v1
+    difficulty: easy
+    domain_tags: [civil, limitation]
+    requires_network: false
+
+  - id: lim_invalid_date_error
+    prompt: "Limitation check with bad date format (expects structured error)."
+    scope: tool_only
+    tool: check_limitation
+    tool_args:
+      case_type: suit_for_money_lent
+      cause_of_action_date: "not-a-date"
+    verifiable_facts:
+      - json_path: error
+        contains: "Invalid date"
+    expected_tool: check_limitation
+    rubric_id: legal_quality_v1
+    difficulty: easy
+    domain_tags: [limitation]
+    requires_network: false
+
+  # Requires INDIANKANOON_API_TOKEN or working fallback; use --skip-network to exclude.
+  - id: prec_contract_query_smoke
+    prompt: "Find Supreme Court precedents on breach of contract (smoke task for retrieval)."
+    scope: tool_only
+    tool: search_precedents
+    tool_args:
+      query: "breach of contract"
+      jurisdiction: supreme_court
+      max_results: 3
+    verifiable_facts: []
+    expected_tool: search_precedents
+    rubric_id: legal_quality_v1
+    difficulty: medium
+    domain_tags: [civil, precedents]
+    requires_network: true
+    notes: "No automated verifiable_facts; score with human rubric or add citation-existence checks later."
+
+  # End-to-end placeholder: run from frontend separately; runner records prompt + expected_tool only.
+  - id: e2e_limitation_routing_example
+    prompt: "Is my suit for money lent still within limitation if cause of action arose on 2022-04-10?"
+    scope: end_to_end
+    tool: check_limitation
+    tool_args:
+      case_type: suit_for_money_lent
+      cause_of_action_date: "2022-04-10"
+    verifiable_facts:
+      - json_path: matched_category
+        equals: suit_for_money_lent
+    expected_tool: check_limitation
+    rubric_id: legal_quality_v1
+    difficulty: medium
+    domain_tags: [limitation, routing]
+    requires_network: false
+    notes: "scope end_to_end documents intent; this harness still runs tool_only proxy unless you wire Gemini."

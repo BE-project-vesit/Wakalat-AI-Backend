@@ -114,10 +114,14 @@ def get_available_tools() -> List[Tool]:
         tools.append(Tool(
             name="search_precedents",
             description=(
-                "Search for legal precedents relevant to a case. "
-                "This tool searches through Indian Supreme Court and High Court judgments "
-                "to find similar cases and their outcomes. Useful for building arguments "
-                "based on established legal principles."
+                "Indian Kanoon precedent search (api.indiankanoon.org when INDIANKANOON_API_TOKEN is set). "
+                "USE WHEN the user wants judgments, comparable cases, how courts treated an issue, or "
+                "issue-based research—not a known citation. Prefer over legal_research when finding "
+                "real cases is the main goal. DO NOT USE for a specific citation or party lookup "
+                "(use find_case_laws), for uploaded document review (use analyze_document), or as a "
+                "substitute for deep_research when the user explicitly wants exhaustive multi-source "
+                "crawling. Query syntax: phrase quotes, ANDD/ORR/NOTT, IK filters per "
+                "https://api.indiankanoon.org/documentation/ ; jurisdiction maps to supremecourt/highcourts."
             ),
             inputSchema={
                 "type": "object",
@@ -142,8 +146,8 @@ def get_available_tools() -> List[Tool]:
                     },
                     "max_results": {
                         "type": "integer",
-                        "description": "Maximum number of results to return",
-                        "default": 10
+                        "description": "Maximum number of results to return (default 5)",
+                        "default": 5
                     }
                 },
                 "required": ["query"]
@@ -154,9 +158,10 @@ def get_available_tools() -> List[Tool]:
         tools.append(Tool(
             name="find_case_laws",
             description=(
-                "Find specific case laws by citation, party names, or legal provisions. "
-                "This tool retrieves full text of judgments from Indian courts and "
-                "provides summaries, key points, and relevant sections."
+                "Retrieve a specific judgment or case by citation, party name, or legal provision reference. "
+                "USE WHEN the user names a case, citation, party, or asks to pull up a particular decision. "
+                "DO NOT USE for open-ended 'cases on topic X' searches—use search_precedents. "
+                "DO NOT USE for general legal explanations without a target case—use legal_research."
             ),
             inputSchema={
                 "type": "object",
@@ -187,9 +192,10 @@ def get_available_tools() -> List[Tool]:
         tools.append(Tool(
             name="analyze_document",
             description=(
-                "Analyze legal documents such as contracts, petitions, affidavits, etc. "
-                "Extracts key information, identifies potential issues, and suggests improvements. "
-                "Supports PDF, DOCX, and text formats."
+                "Analyze a legal document file (contracts, petitions, affidavits, notices). "
+                "USE WHEN the user provides or refers to a document path and wants extraction, issues, "
+                "compliance, or revision guidance. DO NOT USE for pure legal Q&A without a document "
+                "(use legal_research or search_precedents as appropriate)."
             ),
             inputSchema={
                 "type": "object",
@@ -218,21 +224,29 @@ def get_available_tools() -> List[Tool]:
         tools.append(Tool(
             name="legal_research",
             description=(
-                "Conduct comprehensive legal research on specific topics, statutes, or legal questions. "
-                "Provides detailed analysis with references to relevant case laws, statutes, "
-                "and legal commentary."
+                "LLM-based synthesis on Indian legal topics: statutes, tests, elements, procedure, and "
+                "doctrine. USE WHEN the user needs structured legal analysis or statutory framework and "
+                "judgment retrieval is secondary. Prefer search_precedents first when the priority is "
+                "finding comparable Supreme Court or High Court cases. Prefer deep_research (if available) "
+                "when the user wants maximum source-backed crawling and citations. Do not call both "
+                "legal_research and deep_research for the same narrow question in one turn unless the user "
+                "asks for two distinct outputs."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "research_query": {
                         "type": "string",
-                        "description": "The legal question or topic to research"
+                        "description": "Focused legal question or topic (short phrase or one sentence preferred)"
                     },
                     "research_depth": {
                         "type": "string",
                         "enum": ["brief", "detailed", "comprehensive"],
-                        "description": "Depth of research required",
+                        "description": (
+                            "brief = quick overview; detailed = default balanced analysis; "
+                            "comprehensive = deepest (slower, timeout risk—use sparingly). "
+                            "Prefer brief or detailed unless the user explicitly needs maximum depth."
+                        ),
                         "default": "detailed"
                     },
                     "include_statutes": {
@@ -254,10 +268,12 @@ def get_available_tools() -> List[Tool]:
         tools.append(Tool(
             name="deep_research",
             description=(
-                "Conduct deep legal research using AI-powered web crawling of Indian legal sources. "
-                "Automatically searches IndianKanoon and other legal databases, scrapes relevant "
-                "judgments and statutes, and synthesizes a comprehensive research report. "
-                "More thorough than legal_research — use when you need real, cited sources."
+                "Heavyweight research: crawls Indian legal sources (e.g. Indian Kanoon), gathers real "
+                "judgments and statutes, and synthesizes a cited report. USE WHEN the user asks for the "
+                "most thorough, source-backed answer, a research memo, or exhaustive treatment—not for "
+                "a quick statute recap (legal_research brief) or a single known citation (find_case_laws). "
+                "Slower than legal_research; prefer legal_research for fast doctrine-only explanations "
+                "unless source-grounding is explicitly required."
             ),
             inputSchema={
                 "type": "object",
@@ -292,8 +308,9 @@ def get_available_tools() -> List[Tool]:
         Tool(
             name="draft_legal_notice",
             description=(
-                "Draft a legal notice based on provided facts and requirements. "
-                "Generates a professionally formatted legal notice following Indian legal standards."
+                "Draft a formal legal notice (demand, cease and desist, termination, breach, defamation). "
+                "USE ONLY when the user explicitly wants notice text drafted from facts. "
+                "DO NOT USE for general legal research or precedent search."
             ),
             inputSchema={
                 "type": "object",
@@ -326,8 +343,9 @@ def get_available_tools() -> List[Tool]:
         Tool(
             name="check_limitation",
             description=(
-                "Check the limitation period for filing a case under Indian law. "
-                "Calculates time limits based on the Limitation Act, 1963 and provides relevant sections."
+                "Compute limitation under the Limitation Act, 1963 from case type and cause-of-action date. "
+                "USE WHEN the user asks about filing deadlines, limitation, or whether a claim may be barred. "
+                "DO NOT USE for unrelated legal research without a limitation question."
             ),
             inputSchema={
                 "type": "object",

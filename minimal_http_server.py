@@ -114,7 +114,7 @@ def get_available_tools() -> List[Tool]:
                     },
                     "max_results": {
                         "type": "integer",
-                        "default": 10
+                        "default": 5
                     }
                 },
                 "required": ["query"]
