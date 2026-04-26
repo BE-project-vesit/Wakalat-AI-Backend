@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     
     # AI Model Configuration
     gemini_api_key: Optional[str] = None
-    gemini_model: str = "gemini-3.1-flash"
+    gemini_model: str = "gemini-2.0-flash"
 
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4-turbo-preview"
@@ -26,9 +26,7 @@ class Settings(BaseSettings):
     anthropic_api_key: Optional[str] = None
     anthropic_model: str = "claude-3-opus-20240229"
 
-    # Gemini Configuration (for Deep Research)
-    gemini_api_key: Optional[str] = None
-    gemini_model: str = "gemini-2.0-flash"
+    # Gemini model is configured above (gemini_api_key / gemini_model)
 
     # Firecrawl Configuration (for Deep Research)
     firecrawl_api_key: Optional[str] = None
@@ -68,7 +66,7 @@ class Settings(BaseSettings):
     
     # Security
     secret_key: str = "change-this-secret-key-in-production"
-    allowed_origins: str = "http://localhost:3000,http://localhost:5173"
+    allowed_origins: str = "http://localhost:3000,http://localhost:3002,http://localhost:5173"
 
     # Firecrawl
     firecrawl_api_key: Optional[str] = None
