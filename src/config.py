@@ -1,7 +1,6 @@
 """
 Configuration management for Wakalat-AI MCP Server
 """
-import os
 from pathlib import Path
 from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,9 +14,9 @@ class Settings(BaseSettings):
     mcp_server_version: str = "1.0.0"
     mcp_server_port: int = 8000
     
-    # AI Model Configuration
+    # AI Model Configuration (Gemini primary for several tools incl. draft_legal_notice)
     gemini_api_key: Optional[str] = None
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.5-flash"
 
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4-turbo-preview"
@@ -68,9 +67,6 @@ class Settings(BaseSettings):
     secret_key: str = "change-this-secret-key-in-production"
     allowed_origins: str = "http://localhost:3000,http://localhost:3002,http://localhost:5173"
 
-    # Firecrawl
-    firecrawl_api_key: Optional[str] = None
-    
     # Timeout Configuration
     tool_execution_timeout: int = 300  # seconds (5 min)
     sse_keepalive_interval: int = 15  # seconds

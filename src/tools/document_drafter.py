@@ -3,16 +3,20 @@ Document Drafter Tool
 Drafts legal documents like notices, petitions, etc. using LLM
 """
 import json
-from typing import Literal, Optional, Dict, Any
+from typing import Optional, Dict, Any
 from datetime import datetime
-from src.tools.llm import call_llm
+from src.tools.llm import call_llm, is_llm_configured
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
+NOTICE_TYPES = frozenset(
+    ("demand", "cease_desist", "termination", "breach", "defamation", "other")
+)
+
 
 async def draft_notice(
-    notice_type: Literal["demand", "cease_desist", "termination", "breach", "defamation", "other"],
+    notice_type: str,
     facts: str,
     relief_sought: str,
     sender_details: Optional[Dict[str, Any]] = None,
@@ -29,11 +33,40 @@ async def draft_notice(
         recipient_details: Details of recipient
 
     Returns:
-        Drafted legal notice text
-    """
-    logger.info(f"Drafting {notice_type} notice")
+        JSON string: success object with drafted_notice, or {"error": "..."}.
 
+    ``notice_type`` must be exactly one of the strings in ``NOTICE_TYPES`` (MCP / clients
+    often send \"\" if a dropdown is left blank — that is rejected here with a clear error).
+    """
     try:
+        raw = notice_type if isinstance(notice_type, str) else ""
+        resolved = raw.strip()
+        if resolved not in NOTICE_TYPES:
+            return json.dumps(
+                {
+                    "error": (
+                        "notice_type is required and must be exactly one of: "
+                        "demand, cease_desist, termination, breach, defamation, other. "
+                        f"Received: {raw!r}."
+                    )
+                },
+                indent=2,
+            )
+
+        logger.info(f"Drafting {resolved} notice")
+
+        if not is_llm_configured():
+            return json.dumps(
+                {
+                    "error": (
+                        "No LLM API key configured. Set GEMINI_API_KEY, OPENAI_API_KEY, or "
+                        "ANTHROPIC_API_KEY in backend/.env (see .env.example). "
+                        "Ensure the model id matches your provider (e.g. GEMINI_MODEL=gemini-2.5-flash)."
+                    )
+                },
+                indent=2,
+            )
+
         current_date = datetime.now().strftime("%B %d, %Y")
 
         sender_info = "Not provided"
@@ -55,13 +88,13 @@ async def draft_notice(
 
         prompt = (
             f"You are a senior Indian advocate drafting a formal legal notice. Draft a complete, ready-to-send legal notice.\n\n"
-            f"NOTICE TYPE: {notice_type.replace('_', ' ').title()}\n"
+            f"NOTICE TYPE: {resolved.replace('_', ' ').title()}\n"
             f"DATE: {current_date}\n\n"
             f"SENDER DETAILS:\n{sender_info}\n\n"
             f"RECIPIENT DETAILS:\n{recipient_info}\n\n"
             f"FACTS OF THE CASE:\n{facts}\n\n"
             f"RELIEF SOUGHT:\n{relief_sought}\n\n"
-            f"GUIDANCE: {notice_type_guidance[notice_type]}\n\n"
+            f"GUIDANCE: {notice_type_guidance[resolved]}\n\n"
             f"REQUIREMENTS:\n"
             f"- Use formal Indian legal notice format\n"
             f"- Include 'WITHOUT PREJUDICE' header where appropriate\n"
@@ -76,8 +109,25 @@ async def draft_notice(
 
         notice_text = await call_llm(prompt)
 
+        stripped = (notice_text or "").strip()
+        if stripped.startswith("[No LLM API key configured"):
+            return json.dumps(
+                {
+                    "error": (
+                        "No LLM API key configured. Set GEMINI_API_KEY, OPENAI_API_KEY, or "
+                        "ANTHROPIC_API_KEY in backend/.env (see .env.example)."
+                    )
+                },
+                indent=2,
+            )
+        if not stripped:
+            return json.dumps(
+                {"error": "LLM returned empty content. Check API key, model id, and quotas."},
+                indent=2,
+            )
+
         result = {
-            "notice_type": notice_type,
+            "notice_type": resolved,
             "drafted_notice": notice_text,
             "metadata": {
                 "draft_date": current_date,
@@ -91,7 +141,8 @@ async def draft_notice(
         return json.dumps(result, indent=2)
 
     except Exception as e:
-        logger.error(f"Error drafting notice: {str(e)}", exc_info=True)
+        # Use {} style — exception text may contain "{" which breaks loguru f-strings
+        logger.error("Error drafting notice: {}", str(e), exc_info=True)
         return json.dumps({"error": str(e)}, indent=2)
 
 

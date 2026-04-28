@@ -284,7 +284,7 @@ Conduct comprehensive legal research.
 
 ### 5. draft_legal_notice
 
-Draft legal notices.
+Draft legal notices. Requires at least one of `GEMINI_API_KEY`, `OPENAI_API_KEY`, or `ANTHROPIC_API_KEY` in `.env` (see `.env.example`). Response is JSON with `drafted_notice` on success, or `error` if keys are missing or the LLM call fails.
 
 ```json
 {

@@ -56,7 +56,7 @@ All tools live in `src/tools/` and follow the same pattern:
 | `find_case_laws` | `tools/case_law_finder.py` | Stub |
 | `analyze_document` | `tools/document_analyzer.py` | Stub |
 | `legal_research` | `tools/legal_research.py` | Stub (placeholder JSON) |
-| `draft_legal_notice` | `tools/document_drafter.py` | Stub |
+| `draft_legal_notice` | `tools/document_drafter.py` | Live — LLM draft via `call_llm` (Gemini / OpenAI / Anthropic); requires a configured API key |
 | `check_limitation` | `tools/limitation_checker.py` | Stub |
 
 ### `deep_research` pipeline detail
@@ -66,7 +66,7 @@ All tools live in `src/tools/` and follow the same pattern:
 ### Config (`src/config.py`)
 
 `Settings` is a `pydantic_settings.BaseSettings` loaded from `.env`. Key fields:
-- `gemini_api_key` / `gemini_model` — used by `deep_research`
+- `gemini_api_key` / `gemini_model` — used by `deep_research`, `draft_legal_notice` (via `call_llm`), and other LLM-backed tools; OpenAI/Anthropic keys are alternate providers for `call_llm`
 - `firecrawl_api_key` — used by both `precedent_search` and `deep_research`
 - `enable_*` feature flags — gate tool registration in both servers
 

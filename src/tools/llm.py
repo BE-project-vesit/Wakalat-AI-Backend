@@ -10,6 +10,21 @@ logger = setup_logger(__name__)
 
 MAX_RETRIES = 3
 
+# Returned when no provider key is set (kept for callers that skip pre-checks).
+NO_API_KEY_MESSAGE = (
+    "[No LLM API key configured. Set GEMINI_API_KEY, OPENAI_API_KEY, or "
+    "ANTHROPIC_API_KEY in backend/.env to enable AI-powered features.]"
+)
+
+
+def is_llm_configured() -> bool:
+    """True if at least one LLM provider API key is set (non-empty)."""
+    return bool(
+        (settings.gemini_api_key or "").strip()
+        or (settings.openai_api_key or "").strip()
+        or (settings.anthropic_api_key or "").strip()
+    )
+
 
 async def call_llm(prompt: str, max_tokens: int = 3000) -> str:
     """Call Gemini (default), falling back to OpenAI then Anthropic.
@@ -70,4 +85,4 @@ async def call_llm(prompt: str, max_tokens: int = 3000) -> str:
         )
         return response.content[0].text
 
-    return "[No LLM API key configured. Set GEMINI_API_KEY in .env to enable AI-powered features.]"
+    return NO_API_KEY_MESSAGE
